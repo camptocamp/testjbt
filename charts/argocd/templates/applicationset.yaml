@@ -1,0 +1,38 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: "gmf"
+  namespace: argocd
+spec:
+  goTemplate: true
+  generators:
+    - matrix:
+        generators:
+          - git:
+              repoURL: https://github.com/camptocamp/testjbt.git
+              revision: HEAD
+              directories:
+                - path: apps/prod/demo/*
+          - git:
+               repoURL: https://github.com/camptocamp/testjbt.git
+               revision: HEAD
+               files:
+                  - path: "apps/prod/demo/*/config.yaml"
+  template:
+    metadata:
+      name: {{ "{{.path.basename}}" | quote }}
+      annotations:
+        test: test2
+    spec:
+      project: default
+      source:
+        repoURL: "https://github.com/camptocamp/testjbt.git"
+        path: {{ printf "%s/%s" "apps/prod/demo" "{{.path.basename}}" | quote }}
+        helm:
+          values: |
+            {{ `{{ .image_updater | toYaml }}` }}
+        targetRevision: HEAD
+      destination:
+        namespace: default
+        name: in-cluster # Argocd server URL
